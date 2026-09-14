@@ -39,7 +39,7 @@ export default function HomePage() {
                   ENTRADAS
                 </Link>
                 <Link
-                  href="/nuestras-cabanas"
+                  href="/reservar"
                   className="inline-flex items-center justify-center rounded-xl border-2 border-white/30 bg-white/10 px-8 py-3.5 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
                 >
                   RESERVA TU CABAÑA
@@ -109,7 +109,7 @@ export default function HomePage() {
                   Descubre la magia de hospedarte en Cabañas San Isidro, ubicadas en destinos naturales increíbles. Vive una experiencia única de confort y tranquilidad, rodeado de paisajes espectaculares. Desconéctate, relájate y haz de tu escapada algo inolvidable.
                 </p>
                 <Link
-                  href="/nuestras-cabanas"
+                  href="/reservar"
                   className="inline-flex items-center justify-center rounded-xl bg-[#8B6914] px-8 py-3 text-sm font-semibold text-white transition-all hover:bg-[#7a5c12]"
                 >
                   RESERVA

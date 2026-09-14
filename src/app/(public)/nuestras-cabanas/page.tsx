@@ -80,14 +80,12 @@ export default function CabanasPage() {
                       <span className="font-medium">Camas:</span> {cab.beds}
                     </p>
                   </div>
-                  <a
-                    href="https://engine.lobbypms.com/cenote-san-isidro"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <Link
+                    href="/reservar"
                     className="inline-flex w-full items-center justify-center rounded-xl bg-[#0a3d2f] px-4 py-2.5 text-sm font-semibold text-white transition-all hover:bg-[#0d5a3f]"
                   >
                     ¡RESERVA!
-                  </a>
+                  </Link>
                 </div>
               </div>
             ))}
