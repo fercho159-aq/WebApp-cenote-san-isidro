@@ -19,6 +19,7 @@ import {
   BedDouble,
   ChevronLeft,
   ChevronRight,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,19 +34,15 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
-  disabled?: boolean;
+  badge?: string;
 }
 
 const navItems: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Reservas", href: "/reservaciones", icon: CalendarDays },
-  { label: "Cabanas", href: "/cabanas", icon: BedDouble },
+  { label: "Cabañas", href: "/cabanas", icon: BedDouble },
   { label: "Punto de venta", href: "/pos", icon: Utensils },
-  {
-    label: "Housekeeping",
-    href: "/cabanas/limpieza",
-    icon: Sparkles,
-  },
+  { label: "Housekeeping", href: "/cabanas/limpieza", icon: Sparkles, badge: "Nuevo" },
   { label: "Productos", href: "/productos", icon: Package },
   { label: "Registrar gastos", href: "/gastos", icon: DollarSign },
   { label: "Clientes", href: "/huespedes", icon: Users },
@@ -53,7 +50,8 @@ const navItems: NavItem[] = [
   { label: "Control diario", href: "/control-diario", icon: ClipboardList },
   { label: "Control de registros", href: "/registros", icon: Search },
   { label: "Reportes financieros", href: "/reportes", icon: BarChart3 },
-  { label: "Estadisticas", href: "/estadisticas", icon: TrendingUp },
+  { label: "Estadísticas", href: "/estadisticas", icon: TrendingUp },
+  { label: "Configuraciones", href: "/configuracion", icon: Settings },
 ];
 
 export function Sidebar() {
@@ -64,17 +62,17 @@ export function Sidebar() {
     <TooltipProvider delayDuration={0}>
       <aside
         className={cn(
-          "relative flex h-screen flex-col border-r border-border bg-sidebar text-sidebar-foreground transition-all duration-300",
-          collapsed ? "w-16" : "w-64"
+          "relative flex h-screen flex-col border-r border-sidebar-border bg-sidebar transition-all duration-300",
+          collapsed ? "w-16" : "w-60"
         )}
       >
-        {/* Logo / name */}
-        <div className="flex h-16 items-center gap-3 border-b border-white/10 px-4">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
+        {/* Logo / property name */}
+        <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-xs font-bold text-primary-foreground">
             CS
           </div>
           {!collapsed && (
-            <span className="text-sm font-semibold text-white truncate">
+            <span className="text-sm font-semibold text-foreground truncate">
               Cenote San Isidro
             </span>
           )}
@@ -82,7 +80,7 @@ export function Sidebar() {
 
         {/* Navigation */}
         <ScrollArea className="flex-1 py-2">
-          <nav className="flex flex-col gap-1 px-2">
+          <nav className="flex flex-col gap-0.5 px-2">
             {navItems.map((item) => {
               const isActive =
                 pathname === item.href ||
@@ -91,21 +89,24 @@ export function Sidebar() {
 
               const linkContent = (
                 <Link
-                  href={item.disabled ? "#" : item.href}
+                  href={item.href}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                     isActive
-                      ? "bg-sidebar-active text-white"
-                      : "text-sidebar-foreground hover:bg-sidebar-hover hover:text-white",
-                    item.disabled &&
-                      "pointer-events-none opacity-40",
+                      ? "bg-sidebar-active text-sidebar-active-text"
+                      : "text-sidebar-foreground hover:bg-sidebar-hover hover:text-foreground",
                     collapsed && "justify-center px-0"
                   )}
-                  aria-disabled={item.disabled}
-                  tabIndex={item.disabled ? -1 : undefined}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
-                  {!collapsed && <span className="truncate">{item.label}</span>}
+                  {!collapsed && (
+                    <span className="truncate flex-1">{item.label}</span>
+                  )}
+                  {!collapsed && item.badge && (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                      {item.badge}
+                    </span>
+                  )}
                 </Link>
               );
 
@@ -120,9 +121,7 @@ export function Sidebar() {
                 );
               }
 
-              return (
-                <div key={item.href}>{linkContent}</div>
-              );
+              return <div key={item.href}>{linkContent}</div>;
             })}
           </nav>
         </ScrollArea>
@@ -130,8 +129,8 @@ export function Sidebar() {
         {/* Collapse toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex h-12 items-center justify-center border-t border-white/10 text-sidebar-foreground transition-colors hover:bg-sidebar-hover hover:text-white"
-          aria-label={collapsed ? "Expandir menu" : "Colapsar menu"}
+          className="flex h-10 items-center justify-center border-t border-sidebar-border text-sidebar-foreground transition-colors hover:bg-sidebar-hover hover:text-foreground"
+          aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
         >
           {collapsed ? (
             <ChevronRight className="h-4 w-4" />

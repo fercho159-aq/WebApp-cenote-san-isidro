@@ -1,15 +1,15 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Bell, Search } from "lucide-react";
 import { signOut } from "@/actions/auth";
-import { Badge } from "@/components/ui/badge";
 
 const pageTitles: Record<string, string> = {
-  "/dashboard": "Dashboard",
+  "/dashboard": "Panel de control",
   "/reservaciones": "Reservas",
   "/pos": "Punto de venta",
   "/cabanas/limpieza": "Housekeeping",
+  "/cabanas": "Cabañas",
   "/productos": "Productos",
   "/gastos": "Registrar gastos",
   "/huespedes": "Clientes",
@@ -17,20 +17,16 @@ const pageTitles: Record<string, string> = {
   "/control-diario": "Control diario",
   "/registros": "Control de registros",
   "/reportes": "Reportes financieros",
-  "/estadisticas": "Estadisticas",
-  "/configuracion": "Configuracion",
+  "/estadisticas": "Estadísticas",
+  "/configuracion": "Configuraciones",
 };
 
 function getPageTitle(pathname: string): string {
-  // Check for exact match first
   if (pageTitles[pathname]) return pageTitles[pathname];
-
-  // Check for prefix match
   for (const [path, title] of Object.entries(pageTitles)) {
     if (pathname.startsWith(path)) return title;
   }
-
-  return "Dashboard";
+  return "Panel de control";
 }
 
 interface HeaderProps {
@@ -42,25 +38,48 @@ export function Header({ userEmail }: HeaderProps) {
   const title = getPageTitle(pathname);
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface px-6">
-      <h2 className="text-lg font-semibold text-foreground">{title}</h2>
-
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-surface px-6">
       <div className="flex items-center gap-4">
-        <Badge variant="outline" className="hidden sm:inline-flex">
-          Caja activa: Recepcion
-        </Badge>
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      </div>
 
+      <div className="flex items-center gap-3">
+        {/* Cash register info */}
+        <div className="hidden sm:flex items-center gap-4 text-sm">
+          <div className="flex flex-col items-end">
+            <span className="text-xs text-muted-foreground">Caja activa</span>
+            <span className="font-medium text-foreground">Recepción</span>
+          </div>
+          <div className="h-8 w-px bg-border" />
+          <div className="flex flex-col items-end">
+            <span className="text-xs text-muted-foreground">Balance:</span>
+            <span className="font-semibold text-foreground">MXN 0.00</span>
+          </div>
+        </div>
+
+        <div className="h-8 w-px bg-border hidden sm:block" />
+
+        {/* Search */}
+        <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+          <Search className="h-4 w-4" />
+        </button>
+
+        {/* Notifications */}
+        <button className="relative flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+          <Bell className="h-4 w-4" />
+        </button>
+
+        {/* User menu */}
         <div className="relative group">
-          <button className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+          <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
               <User className="h-4 w-4" />
             </div>
-            <span className="hidden sm:inline-block max-w-[150px] truncate">
+            <span className="hidden md:inline-block max-w-[150px] truncate text-foreground text-sm">
               {userEmail ?? "Admin"}
             </span>
           </button>
 
-          {/* Dropdown */}
           <div className="absolute right-0 top-full z-50 mt-1 hidden w-48 rounded-lg border border-border bg-popover p-1 shadow-lg group-hover:block">
             <form action={signOut}>
               <button
@@ -68,7 +87,7 @@ export function Header({ userEmail }: HeaderProps) {
                 className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-destructive transition-colors hover:bg-muted"
               >
                 <LogOut className="h-4 w-4" />
-                Cerrar sesion
+                Cerrar sesión
               </button>
             </form>
           </div>

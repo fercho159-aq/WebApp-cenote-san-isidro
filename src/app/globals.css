@@ -57,11 +57,13 @@
   --card: #ffffff;
   --card-foreground: #111827;
 
-  /* Sidebar */
-  --sidebar: #0F1419;
-  --sidebar-foreground: #D1D5DB;
+  /* Sidebar — light theme like LobbyPMS */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #6B7280;
   --sidebar-active: #0D7D6C;
-  --sidebar-hover: #1A2332;
+  --sidebar-hover: #F0FDFA;
+  --sidebar-border: #E5E7EB;
+  --sidebar-active-text: #ffffff;
 
   /* Radius */
   --radius: 0.5rem;
@@ -161,6 +163,8 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-active: var(--sidebar-active);
   --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-active-text: var(--sidebar-active-text);
   --color-status-confirmed: var(--status-confirmed);
   --color-status-confirmed-bg: var(--status-confirmed-bg);
   --color-status-cancelled: var(--status-cancelled);

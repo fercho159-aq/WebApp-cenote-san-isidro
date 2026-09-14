@@ -17,32 +17,20 @@ export default function LoginPage() {
   const [state, formAction, isPending] = useActionState(signIn, null);
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader className="space-y-2 text-center">
-        <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-          <svg
-            className="h-6 w-6 text-primary-foreground"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9zm0 0v9l6 3"
-            />
-          </svg>
+    <Card className="shadow-lg w-full max-w-sm">
+      <CardHeader className="space-y-3 text-center pb-2">
+        <div className="mx-auto mb-1 flex h-14 w-14 items-center justify-center rounded-xl bg-primary text-lg font-bold text-primary-foreground">
+          CS
         </div>
-        <CardTitle className="text-2xl font-bold">Cenote San Isidro</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-xl font-bold">Cenote San Isidro</CardTitle>
+        <CardDescription className="text-sm">
           Inicia sesión para administrar tu propiedad
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form action={formAction} className="space-y-4">
           {state?.error && (
-            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">
               {state.error}
             </div>
           )}
