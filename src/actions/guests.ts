@@ -2,93 +2,97 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getDb } from '@/lib/db'
 import type { Guest, Reservation } from '@/types'
 
 export async function getGuests(search?: string) {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  let query = supabase
-    .from('guests')
-    .select('*')
-    .order('last_name', { ascending: true })
-    .order('first_name', { ascending: true })
+  try {
+    if (search) {
+      const term = `%${search}%`
+      const rows = await sql`
+        SELECT * FROM guests
+        WHERE first_name ILIKE ${term}
+          OR last_name ILIKE ${term}
+          OR email ILIKE ${term}
+          OR phone ILIKE ${term}
+        ORDER BY last_name ASC, first_name ASC
+      `
+      return rows as Guest[]
+    }
 
-  if (search) {
-    const term = `%${search}%`
-    query = query.or(
-      `first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term},phone.ilike.${term}`
-    )
-  }
-
-  const { data, error } = await query
-
-  if (error) {
+    const rows = await sql`
+      SELECT * FROM guests ORDER BY last_name ASC, first_name ASC
+    `
+    return rows as Guest[]
+  } catch (error) {
     console.error('Error fetching guests:', error)
     return []
   }
-
-  return data as Guest[]
 }
 
 export async function getGuestById(id: string) {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  const { data: guest, error: guestError } = await supabase
-    .from('guests')
-    .select('*')
-    .eq('id', id)
-    .single()
+  try {
+    const guestRows = await sql`SELECT * FROM guests WHERE id = ${id}`
+    const guest = guestRows[0]
 
-  if (guestError || !guest) {
+    if (!guest) return null
+
+    const reservations = await sql`
+      SELECT res.*,
+        CASE WHEN rm.id IS NOT NULL THEN json_build_object('name', rm.name) ELSE NULL END as room
+      FROM reservations res
+      LEFT JOIN rooms rm ON res.room_id = rm.id
+      WHERE res.guest_id = ${id}
+      ORDER BY res.check_in_date DESC
+    `
+
+    return {
+      guest: guest as Guest,
+      reservations: reservations as (Reservation & { room: { name: string } })[],
+    }
+  } catch (error) {
+    console.error('Error fetching guest:', error)
     return null
-  }
-
-  const { data: reservations, error: reservationsError } = await supabase
-    .from('reservations')
-    .select('*, room:rooms(name)')
-    .eq('guest_id', id)
-    .order('check_in_date', { ascending: false })
-
-  if (reservationsError) {
-    console.error('Error fetching reservations:', reservationsError)
-  }
-
-  return {
-    guest: guest as Guest,
-    reservations: (reservations ?? []) as (Reservation & { room: { name: string } })[],
   }
 }
 
 export async function createGuest(formData: FormData) {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  const guestData = {
-    first_name: formData.get('first_name') as string,
-    last_name: formData.get('last_name') as string,
-    email: (formData.get('email') as string) || null,
-    phone: (formData.get('phone') as string) || null,
-    id_document_type: (formData.get('id_document_type') as string) || null,
-    id_document_number: (formData.get('id_document_number') as string) || null,
-    nationality: (formData.get('nationality') as string) || null,
-    country: (formData.get('country') as string) || null,
-    state: (formData.get('state') as string) || null,
-    city: (formData.get('city') as string) || null,
-    address: (formData.get('address') as string) || null,
-    notes: (formData.get('notes') as string) || null,
-  }
+  const firstName = formData.get('first_name') as string
+  const lastName = formData.get('last_name') as string
+  const email = (formData.get('email') as string) || null
+  const phone = (formData.get('phone') as string) || null
+  const idDocumentType = (formData.get('id_document_type') as string) || null
+  const idDocumentNumber = (formData.get('id_document_number') as string) || null
+  const nationality = (formData.get('nationality') as string) || null
+  const country = (formData.get('country') as string) || null
+  const state = (formData.get('state') as string) || null
+  const city = (formData.get('city') as string) || null
+  const address = (formData.get('address') as string) || null
+  const notes = (formData.get('notes') as string) || null
 
-  if (!guestData.first_name || !guestData.last_name) {
+  if (!firstName || !lastName) {
     return { error: 'El nombre y apellido son obligatorios.' }
   }
 
-  const { data, error } = await supabase
-    .from('guests')
-    .insert(guestData)
-    .select()
-    .single()
-
-  if (error) {
+  try {
+    await sql`
+      INSERT INTO guests (
+        first_name, last_name, email, phone, id_document_type,
+        id_document_number, nationality, country, state, city,
+        address, notes
+      ) VALUES (
+        ${firstName}, ${lastName}, ${email}, ${phone}, ${idDocumentType},
+        ${idDocumentNumber}, ${nationality}, ${country}, ${state}, ${city},
+        ${address}, ${notes}
+      )
+    `
+  } catch (error) {
     console.error('Error creating guest:', error)
     return { error: 'Error al crear el huésped. Intente de nuevo.' }
   }
@@ -98,33 +102,44 @@ export async function createGuest(formData: FormData) {
 }
 
 export async function updateGuest(id: string, formData: FormData) {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  const guestData = {
-    first_name: formData.get('first_name') as string,
-    last_name: formData.get('last_name') as string,
-    email: (formData.get('email') as string) || null,
-    phone: (formData.get('phone') as string) || null,
-    id_document_type: (formData.get('id_document_type') as string) || null,
-    id_document_number: (formData.get('id_document_number') as string) || null,
-    nationality: (formData.get('nationality') as string) || null,
-    country: (formData.get('country') as string) || null,
-    state: (formData.get('state') as string) || null,
-    city: (formData.get('city') as string) || null,
-    address: (formData.get('address') as string) || null,
-    notes: (formData.get('notes') as string) || null,
-  }
+  const firstName = formData.get('first_name') as string
+  const lastName = formData.get('last_name') as string
+  const email = (formData.get('email') as string) || null
+  const phone = (formData.get('phone') as string) || null
+  const idDocumentType = (formData.get('id_document_type') as string) || null
+  const idDocumentNumber = (formData.get('id_document_number') as string) || null
+  const nationality = (formData.get('nationality') as string) || null
+  const country = (formData.get('country') as string) || null
+  const state = (formData.get('state') as string) || null
+  const city = (formData.get('city') as string) || null
+  const address = (formData.get('address') as string) || null
+  const notes = (formData.get('notes') as string) || null
 
-  if (!guestData.first_name || !guestData.last_name) {
+  if (!firstName || !lastName) {
     return { error: 'El nombre y apellido son obligatorios.' }
   }
 
-  const { error } = await supabase
-    .from('guests')
-    .update(guestData)
-    .eq('id', id)
-
-  if (error) {
+  try {
+    await sql`
+      UPDATE guests SET
+        first_name = ${firstName},
+        last_name = ${lastName},
+        email = ${email},
+        phone = ${phone},
+        id_document_type = ${idDocumentType},
+        id_document_number = ${idDocumentNumber},
+        nationality = ${nationality},
+        country = ${country},
+        state = ${state},
+        city = ${city},
+        address = ${address},
+        notes = ${notes},
+        updated_at = NOW()
+      WHERE id = ${id}
+    `
+  } catch (error) {
     console.error('Error updating guest:', error)
     return { error: 'Error al actualizar el huésped. Intente de nuevo.' }
   }
@@ -135,26 +150,20 @@ export async function updateGuest(id: string, formData: FormData) {
 }
 
 export async function deleteGuest(id: string) {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  // Check if guest has reservations
-  const { count, error: countError } = await supabase
-    .from('reservations')
-    .select('*', { count: 'exact', head: true })
-    .eq('guest_id', id)
+  try {
+    // Check if guest has reservations
+    const countResult = await sql`
+      SELECT COUNT(*)::int as count FROM reservations WHERE guest_id = ${id}
+    `
 
-  if (countError) {
-    console.error('Error checking reservations:', countError)
-    return { error: 'Error al verificar las reservaciones.' }
-  }
+    if (countResult[0].count > 0) {
+      return { error: 'No se puede eliminar un huésped que tiene reservaciones.' }
+    }
 
-  if (count && count > 0) {
-    return { error: 'No se puede eliminar un huésped que tiene reservaciones.' }
-  }
-
-  const { error } = await supabase.from('guests').delete().eq('id', id)
-
-  if (error) {
+    await sql`DELETE FROM guests WHERE id = ${id}`
+  } catch (error) {
     console.error('Error deleting guest:', error)
     return { error: 'Error al eliminar el huésped.' }
   }

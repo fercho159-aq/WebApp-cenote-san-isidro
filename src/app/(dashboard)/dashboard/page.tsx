@@ -148,7 +148,7 @@ export default async function DashboardPage() {
       </Card>
 
       {/* Recent reservations */}
-      <RecentReservations reservations={reservations} />
+      <RecentReservations reservations={reservations as any} />
 
       {/* Room status grid */}
       <RoomStatusGrid rooms={rooms} />

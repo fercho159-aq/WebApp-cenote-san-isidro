@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@/lib/supabase/server'
+import { getDb } from '@/lib/db'
 
 export interface DashboardStats {
   arrivalsToday: number
@@ -12,8 +12,7 @@ export interface DashboardStats {
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  const supabase = await createClient()
-
+  const sql = getDb()
   const today = new Date().toISOString().split('T')[0]
 
   const [
@@ -25,97 +24,92 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     dirtyResult,
   ] = await Promise.all([
     // Today's arrivals
-    supabase
-      .from('reservations')
-      .select('id', { count: 'exact', head: true })
-      .eq('check_in_date', today)
-      .in('status', ['confirmed', 'pending']),
+    sql`SELECT COUNT(*)::int as count FROM reservations WHERE check_in_date = ${today} AND status IN ('confirmed', 'pending')`,
 
     // Today's departures
-    supabase
-      .from('reservations')
-      .select('id', { count: 'exact', head: true })
-      .eq('check_out_date', today)
-      .eq('status', 'checked_in'),
+    sql`SELECT COUNT(*)::int as count FROM reservations WHERE check_out_date = ${today} AND status = 'checked_in'`,
 
     // Occupied rooms
-    supabase
-      .from('rooms')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'occupied'),
+    sql`SELECT COUNT(*)::int as count FROM rooms WHERE status = 'occupied'`,
 
     // Available rooms
-    supabase
-      .from('rooms')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'available'),
+    sql`SELECT COUNT(*)::int as count FROM rooms WHERE status = 'available'`,
 
     // Today's income
-    supabase
-      .from('payments')
-      .select('amount')
-      .gte('created_at', `${today}T00:00:00`)
-      .lt('created_at', `${today}T23:59:59.999`),
+    sql`SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE created_at >= ${today + 'T00:00:00'} AND created_at < ${today + 'T23:59:59.999'}`,
 
     // Dirty rooms
-    supabase
-      .from('rooms')
-      .select('id', { count: 'exact', head: true })
-      .eq('cleaning_status', 'dirty'),
+    sql`SELECT COUNT(*)::int as count FROM rooms WHERE cleaning_status = 'dirty'`,
   ])
 
-  const todayIncome = incomeResult.data
-    ? incomeResult.data.reduce((sum, p) => sum + (p.amount || 0), 0)
-    : 0
-
   return {
-    arrivalsToday: arrivalsResult.count ?? 0,
-    departuresToday: departuresResult.count ?? 0,
-    occupiedRooms: occupiedResult.count ?? 0,
-    availableRooms: availableResult.count ?? 0,
-    todayIncome,
-    dirtyRooms: dirtyResult.count ?? 0,
+    arrivalsToday: arrivalsResult[0].count,
+    departuresToday: departuresResult[0].count,
+    occupiedRooms: occupiedResult[0].count,
+    availableRooms: availableResult[0].count,
+    todayIncome: Number(incomeResult[0].total),
+    dirtyRooms: dirtyResult[0].count,
   }
 }
 
 export async function getRecentReservations() {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  const { data, error } = await supabase
-    .from('reservations')
-    .select('*, guest:guests(*), room:rooms(name)')
-    .order('created_at', { ascending: false })
-    .limit(5)
-
-  if (error) {
+  try {
+    const rows = await sql`
+      SELECT res.*,
+        CASE WHEN g.id IS NOT NULL THEN row_to_json(g) ELSE NULL END as guest,
+        CASE WHEN rm.id IS NOT NULL THEN json_build_object('name', rm.name) ELSE NULL END as room
+      FROM reservations res
+      LEFT JOIN guests g ON res.guest_id = g.id
+      LEFT JOIN rooms rm ON res.room_id = rm.id
+      ORDER BY res.created_at DESC
+      LIMIT 5
+    `
+    return rows
+  } catch (error) {
     console.error('Error fetching recent reservations:', error)
     return []
   }
-
-  return data
 }
 
 export async function getTodayMovements() {
-  const supabase = await createClient()
-
+  const sql = getDb()
   const today = new Date().toISOString().split('T')[0]
 
-  const [arrivalsResult, departuresResult] = await Promise.all([
-    supabase
-      .from('reservations')
-      .select('*, guest:guests(*), room:rooms(name)')
-      .eq('check_in_date', today)
-      .in('status', ['confirmed', 'pending', 'checked_in']),
+  try {
+    const [arrivals, departures] = await Promise.all([
+      sql`
+        SELECT res.*,
+          CASE WHEN g.id IS NOT NULL THEN row_to_json(g) ELSE NULL END as guest,
+          CASE WHEN rm.id IS NOT NULL THEN json_build_object('name', rm.name) ELSE NULL END as room
+        FROM reservations res
+        LEFT JOIN guests g ON res.guest_id = g.id
+        LEFT JOIN rooms rm ON res.room_id = rm.id
+        WHERE res.check_in_date = ${today}
+          AND res.status IN ('confirmed', 'pending', 'checked_in')
+      `,
+      sql`
+        SELECT res.*,
+          CASE WHEN g.id IS NOT NULL THEN row_to_json(g) ELSE NULL END as guest,
+          CASE WHEN rm.id IS NOT NULL THEN json_build_object('name', rm.name) ELSE NULL END as room
+        FROM reservations res
+        LEFT JOIN guests g ON res.guest_id = g.id
+        LEFT JOIN rooms rm ON res.room_id = rm.id
+        WHERE res.check_out_date = ${today}
+          AND res.status IN ('checked_in', 'checked_out')
+      `,
+    ])
 
-    supabase
-      .from('reservations')
-      .select('*, guest:guests(*), room:rooms(name)')
-      .eq('check_out_date', today)
-      .in('status', ['checked_in', 'checked_out']),
-  ])
-
-  return {
-    arrivals: arrivalsResult.data ?? [],
-    departures: departuresResult.data ?? [],
+    return {
+      arrivals,
+      departures,
+    }
+  } catch (error) {
+    console.error('Error fetching today movements:', error)
+    return {
+      arrivals: [],
+      departures: [],
+    }
   }
 }

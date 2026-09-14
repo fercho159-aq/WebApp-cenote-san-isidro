@@ -1,69 +1,67 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createClient } from '@/lib/supabase/server'
+import { getDb } from '@/lib/db'
 import type { Room, RoomCategory } from '@/types'
 
 export async function getRooms(): Promise<Room[]> {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  const { data, error } = await supabase
-    .from('rooms')
-    .select('*, category:room_categories(*)')
-    .order('sort_order', { ascending: true })
-
-  if (error) {
+  try {
+    const rows = await sql`
+      SELECT r.*,
+        CASE WHEN rc.id IS NOT NULL THEN row_to_json(rc) ELSE NULL END as category
+      FROM rooms r
+      LEFT JOIN room_categories rc ON r.category_id = rc.id
+      ORDER BY r.sort_order ASC
+    `
+    return rows as Room[]
+  } catch (error) {
     console.error('Error fetching rooms:', error)
     return []
   }
-
-  return data as Room[]
 }
 
 export async function getRoomById(id: string): Promise<Room | null> {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  const { data, error } = await supabase
-    .from('rooms')
-    .select('*, category:room_categories(*)')
-    .eq('id', id)
-    .single()
-
-  if (error) {
+  try {
+    const rows = await sql`
+      SELECT r.*,
+        CASE WHEN rc.id IS NOT NULL THEN row_to_json(rc) ELSE NULL END as category
+      FROM rooms r
+      LEFT JOIN room_categories rc ON r.category_id = rc.id
+      WHERE r.id = ${id}
+    `
+    return (rows[0] as Room) ?? null
+  } catch (error) {
     console.error('Error fetching room:', error)
     return null
   }
-
-  return data as Room
 }
 
 export async function getRoomCategories(): Promise<RoomCategory[]> {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  const { data, error } = await supabase
-    .from('room_categories')
-    .select('*')
-    .order('sort_order', { ascending: true })
-
-  if (error) {
+  try {
+    const rows = await sql`
+      SELECT * FROM room_categories ORDER BY sort_order ASC
+    `
+    return rows as RoomCategory[]
+  } catch (error) {
     console.error('Error fetching room categories:', error)
     return []
   }
-
-  return data as RoomCategory[]
 }
 
 export async function updateRoomStatus(id: string, status: string) {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  const { error } = await supabase
-    .from('rooms')
-    .update({ status })
-    .eq('id', id)
-
-  if (error) {
+  try {
+    await sql`UPDATE rooms SET status = ${status} WHERE id = ${id}`
+  } catch (error) {
     console.error('Error updating room status:', error)
-    return { error: error.message }
+    return { error: (error as Error).message }
   }
 
   revalidatePath('/cabanas')
@@ -73,16 +71,13 @@ export async function updateRoomStatus(id: string, status: string) {
 }
 
 export async function updateCleaningStatus(id: string, status: string) {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  const { error } = await supabase
-    .from('rooms')
-    .update({ cleaning_status: status })
-    .eq('id', id)
-
-  if (error) {
+  try {
+    await sql`UPDATE rooms SET cleaning_status = ${status} WHERE id = ${id}`
+  } catch (error) {
     console.error('Error updating cleaning status:', error)
-    return { error: error.message }
+    return { error: (error as Error).message }
   }
 
   revalidatePath('/cabanas')
@@ -93,16 +88,13 @@ export async function updateCleaningStatus(id: string, status: string) {
 }
 
 export async function updateRoomNotes(id: string, notes: string) {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  const { error } = await supabase
-    .from('rooms')
-    .update({ notes })
-    .eq('id', id)
-
-  if (error) {
+  try {
+    await sql`UPDATE rooms SET notes = ${notes} WHERE id = ${id}`
+  } catch (error) {
     console.error('Error updating room notes:', error)
-    return { error: error.message }
+    return { error: (error as Error).message }
   }
 
   revalidatePath(`/cabanas/${id}`)
@@ -110,23 +102,24 @@ export async function updateRoomNotes(id: string, notes: string) {
 }
 
 export async function getRoomReservations(roomId: string) {
-  const supabase = await createClient()
-
+  const sql = getDb()
   const today = new Date().toISOString().split('T')[0]
 
-  const { data, error } = await supabase
-    .from('reservations')
-    .select('*, guest:guests(*)')
-    .eq('room_id', roomId)
-    .gte('check_out_date', today)
-    .in('status', ['pending', 'confirmed', 'checked_in'])
-    .order('check_in_date', { ascending: true })
-    .limit(10)
-
-  if (error) {
+  try {
+    const rows = await sql`
+      SELECT res.*,
+        CASE WHEN g.id IS NOT NULL THEN row_to_json(g) ELSE NULL END as guest
+      FROM reservations res
+      LEFT JOIN guests g ON res.guest_id = g.id
+      WHERE res.room_id = ${roomId}
+        AND res.check_out_date >= ${today}
+        AND res.status IN ('pending', 'confirmed', 'checked_in')
+      ORDER BY res.check_in_date ASC
+      LIMIT 10
+    `
+    return rows
+  } catch (error) {
     console.error('Error fetching room reservations:', error)
     return []
   }
-
-  return data
 }

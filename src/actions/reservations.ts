@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getDb } from '@/lib/db'
 import { TAX_RATE } from '@/lib/constants'
 import type { Reservation, Room } from '@/types'
 
@@ -14,170 +14,205 @@ export async function getReservations(filters?: {
   startDate?: string
   endDate?: string
 }) {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  let query = supabase
-    .from('reservations')
-    .select('*, guest:guests(*), room:rooms(*, category:room_categories(*))')
-    .order('check_in_date', { ascending: false })
+  const statusFilter =
+    filters?.status && filters.status !== 'all' ? filters.status : null
+  const searchPattern = filters?.search ? `%${filters.search}%` : null
+  const startDate = filters?.startDate || null
+  const endDate = filters?.endDate || null
 
-  if (filters?.status && filters.status !== 'all') {
-    query = query.eq('status', filters.status)
-  }
-
-  if (filters?.search) {
-    const term = `%${filters.search}%`
-    query = query.or(
-      `reservation_number.ilike.${term},guest.first_name.ilike.${term},guest.last_name.ilike.${term}`
-    )
-  }
-
-  if (filters?.startDate) {
-    query = query.gte('check_in_date', filters.startDate)
-  }
-
-  if (filters?.endDate) {
-    query = query.lte('check_out_date', filters.endDate)
-  }
-
-  const { data, error } = await query
-
-  if (error) {
+  try {
+    const rows = await sql`
+      SELECT res.*,
+        CASE WHEN g.id IS NOT NULL THEN row_to_json(g) ELSE NULL END as guest,
+        CASE WHEN rm.id IS NOT NULL THEN
+          json_build_object(
+            'id', rm.id, 'name', rm.name, 'category_id', rm.category_id,
+            'status', rm.status, 'cleaning_status', rm.cleaning_status,
+            'notes', rm.notes, 'sort_order', rm.sort_order,
+            'category', CASE WHEN rc.id IS NOT NULL THEN row_to_json(rc) ELSE NULL END
+          )
+        ELSE NULL END as room
+      FROM reservations res
+      LEFT JOIN guests g ON res.guest_id = g.id
+      LEFT JOIN rooms rm ON res.room_id = rm.id
+      LEFT JOIN room_categories rc ON rm.category_id = rc.id
+      WHERE (${statusFilter} IS NULL OR res.status = ${statusFilter})
+        AND (${searchPattern} IS NULL OR res.reservation_number ILIKE ${searchPattern} OR g.first_name ILIKE ${searchPattern} OR g.last_name ILIKE ${searchPattern})
+        AND (${startDate} IS NULL OR res.check_in_date >= ${startDate})
+        AND (${endDate} IS NULL OR res.check_out_date <= ${endDate})
+      ORDER BY res.check_in_date DESC
+    `
+    return rows as Reservation[]
+  } catch (error) {
     console.error('Error fetching reservations:', error)
     return []
   }
-
-  return data as Reservation[]
 }
 
 export async function getReservationById(id: string) {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  const { data, error } = await supabase
-    .from('reservations')
-    .select('*, guest:guests(*), room:rooms(*, category:room_categories(*))')
-    .eq('id', id)
-    .single()
-
-  if (error) {
+  try {
+    const rows = await sql`
+      SELECT res.*,
+        CASE WHEN g.id IS NOT NULL THEN row_to_json(g) ELSE NULL END as guest,
+        CASE WHEN rm.id IS NOT NULL THEN
+          json_build_object(
+            'id', rm.id, 'name', rm.name, 'category_id', rm.category_id,
+            'status', rm.status, 'cleaning_status', rm.cleaning_status,
+            'notes', rm.notes, 'sort_order', rm.sort_order,
+            'category', CASE WHEN rc.id IS NOT NULL THEN row_to_json(rc) ELSE NULL END
+          )
+        ELSE NULL END as room
+      FROM reservations res
+      LEFT JOIN guests g ON res.guest_id = g.id
+      LEFT JOIN rooms rm ON res.room_id = rm.id
+      LEFT JOIN room_categories rc ON rm.category_id = rc.id
+      WHERE res.id = ${id}
+    `
+    return (rows[0] as Reservation) ?? null
+  } catch (error) {
     console.error('Error fetching reservation:', error)
     return null
   }
-
-  return data as Reservation
 }
 
 export async function getArrivals(date?: string) {
-  const supabase = await createClient()
+  const sql = getDb()
   const targetDate = date || new Date().toISOString().split('T')[0]
 
-  const { data, error } = await supabase
-    .from('reservations')
-    .select('*, guest:guests(*), room:rooms(*, category:room_categories(*))')
-    .eq('check_in_date', targetDate)
-    .in('status', ['pending', 'confirmed'])
-    .order('created_at', { ascending: true })
-
-  if (error) {
+  try {
+    const rows = await sql`
+      SELECT res.*,
+        CASE WHEN g.id IS NOT NULL THEN row_to_json(g) ELSE NULL END as guest,
+        CASE WHEN rm.id IS NOT NULL THEN
+          json_build_object(
+            'id', rm.id, 'name', rm.name, 'category_id', rm.category_id,
+            'status', rm.status, 'cleaning_status', rm.cleaning_status,
+            'notes', rm.notes, 'sort_order', rm.sort_order,
+            'category', CASE WHEN rc.id IS NOT NULL THEN row_to_json(rc) ELSE NULL END
+          )
+        ELSE NULL END as room
+      FROM reservations res
+      LEFT JOIN guests g ON res.guest_id = g.id
+      LEFT JOIN rooms rm ON res.room_id = rm.id
+      LEFT JOIN room_categories rc ON rm.category_id = rc.id
+      WHERE res.check_in_date = ${targetDate}
+        AND res.status IN ('pending', 'confirmed')
+      ORDER BY res.created_at ASC
+    `
+    return rows as Reservation[]
+  } catch (error) {
     console.error('Error fetching arrivals:', error)
     return []
   }
-
-  return data as Reservation[]
 }
 
 export async function getDepartures(date?: string) {
-  const supabase = await createClient()
+  const sql = getDb()
   const targetDate = date || new Date().toISOString().split('T')[0]
 
-  const { data, error } = await supabase
-    .from('reservations')
-    .select('*, guest:guests(*), room:rooms(*, category:room_categories(*))')
-    .eq('check_out_date', targetDate)
-    .eq('status', 'checked_in')
-    .order('created_at', { ascending: true })
-
-  if (error) {
+  try {
+    const rows = await sql`
+      SELECT res.*,
+        CASE WHEN g.id IS NOT NULL THEN row_to_json(g) ELSE NULL END as guest,
+        CASE WHEN rm.id IS NOT NULL THEN
+          json_build_object(
+            'id', rm.id, 'name', rm.name, 'category_id', rm.category_id,
+            'status', rm.status, 'cleaning_status', rm.cleaning_status,
+            'notes', rm.notes, 'sort_order', rm.sort_order,
+            'category', CASE WHEN rc.id IS NOT NULL THEN row_to_json(rc) ELSE NULL END
+          )
+        ELSE NULL END as room
+      FROM reservations res
+      LEFT JOIN guests g ON res.guest_id = g.id
+      LEFT JOIN rooms rm ON res.room_id = rm.id
+      LEFT JOIN room_categories rc ON rm.category_id = rc.id
+      WHERE res.check_out_date = ${targetDate}
+        AND res.status = 'checked_in'
+      ORDER BY res.created_at ASC
+    `
+    return rows as Reservation[]
+  } catch (error) {
     console.error('Error fetching departures:', error)
     return []
   }
-
-  return data as Reservation[]
 }
 
 export async function getCalendarData(startDate: string, endDate: string) {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  const [roomsResult, reservationsResult] = await Promise.all([
-    supabase
-      .from('rooms')
-      .select('*, category:room_categories(*)')
-      .order('sort_order', { ascending: true }),
-    supabase
-      .from('reservations')
-      .select('*, guest:guests(first_name, last_name), room:rooms(name)')
-      .in('status', ['pending', 'confirmed', 'checked_in'])
-      .lte('check_in_date', endDate)
-      .gte('check_out_date', startDate),
-  ])
+  try {
+    const [rooms, reservations] = await Promise.all([
+      sql`
+        SELECT r.*,
+          CASE WHEN rc.id IS NOT NULL THEN row_to_json(rc) ELSE NULL END as category
+        FROM rooms r
+        LEFT JOIN room_categories rc ON r.category_id = rc.id
+        ORDER BY r.sort_order ASC
+      `,
+      sql`
+        SELECT res.*,
+          CASE WHEN g.id IS NOT NULL
+            THEN json_build_object('first_name', g.first_name, 'last_name', g.last_name)
+            ELSE NULL END as guest,
+          CASE WHEN rm.id IS NOT NULL
+            THEN json_build_object('name', rm.name)
+            ELSE NULL END as room
+        FROM reservations res
+        LEFT JOIN guests g ON res.guest_id = g.id
+        LEFT JOIN rooms rm ON res.room_id = rm.id
+        WHERE res.status IN ('pending', 'confirmed', 'checked_in')
+          AND res.check_in_date <= ${endDate}
+          AND res.check_out_date >= ${startDate}
+      `,
+    ])
 
-  if (roomsResult.error) {
-    console.error('Error fetching rooms for calendar:', roomsResult.error)
-  }
-  if (reservationsResult.error) {
-    console.error(
-      'Error fetching reservations for calendar:',
-      reservationsResult.error
-    )
-  }
-
-  return {
-    rooms: (roomsResult.data ?? []) as Room[],
-    reservations: (reservationsResult.data ?? []) as Reservation[],
+    return {
+      rooms: rooms as Room[],
+      reservations: reservations as Reservation[],
+    }
+  } catch (error) {
+    console.error('Error fetching calendar data:', error)
+    return {
+      rooms: [] as Room[],
+      reservations: [] as Reservation[],
+    }
   }
 }
 
 export async function getAvailableRooms(checkIn: string, checkOut: string) {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  // Get all rooms
-  const { data: rooms, error: roomsError } = await supabase
-    .from('rooms')
-    .select('*, category:room_categories(*)')
-    .in('status', ['available', 'occupied'])
-    .order('sort_order', { ascending: true })
-
-  if (roomsError) {
-    console.error('Error fetching rooms:', roomsError)
+  try {
+    const rows = await sql`
+      SELECT r.*,
+        CASE WHEN rc.id IS NOT NULL THEN row_to_json(rc) ELSE NULL END as category
+      FROM rooms r
+      LEFT JOIN room_categories rc ON r.category_id = rc.id
+      WHERE r.status IN ('available', 'occupied')
+        AND NOT EXISTS (
+          SELECT 1 FROM reservations res
+          WHERE res.room_id = r.id
+            AND res.status IN ('pending', 'confirmed', 'checked_in')
+            AND res.check_in_date < ${checkOut}
+            AND res.check_out_date > ${checkIn}
+        )
+      ORDER BY r.sort_order ASC
+    `
+    return rows as Room[]
+  } catch (error) {
+    console.error('Error fetching available rooms:', error)
     return []
   }
-
-  // Get reservations that overlap with the desired dates
-  const { data: overlapping, error: overlapError } = await supabase
-    .from('reservations')
-    .select('room_id')
-    .in('status', ['pending', 'confirmed', 'checked_in'])
-    .lt('check_in_date', checkOut)
-    .gt('check_out_date', checkIn)
-
-  if (overlapError) {
-    console.error('Error checking availability:', overlapError)
-    return rooms as Room[]
-  }
-
-  const occupiedRoomIds = new Set(
-    (overlapping ?? []).map((r: { room_id: string }) => r.room_id)
-  )
-
-  return (rooms ?? []).filter(
-    (room: Room) => !occupiedRoomIds.has(room.id)
-  ) as Room[]
 }
 
 // ---- Mutations ----
 
 export async function createReservation(formData: FormData) {
-  const supabase = await createClient()
+  const sql = getDb()
 
   const checkInDate = formData.get('check_in_date') as string
   const checkOutDate = formData.get('check_out_date') as string
@@ -238,39 +273,29 @@ export async function createReservation(formData: FormData) {
     .padStart(4, '0')
   const reservationNumber = `RSV-${year}${month}-${random}`
 
-  const reservationData = {
-    reservation_number: reservationNumber,
-    guest_id: guestId,
-    room_id: roomId,
-    check_in_date: checkInDate,
-    check_out_date: checkOutDate,
-    nights,
-    adults,
-    children,
-    status: 'pending',
-    payment_status: 'unpaid',
-    booking_channel: bookingChannel,
-    channel_reference: channelReference,
-    nightly_rate: nightlyRate,
-    discount_type: discountType === 'none' ? null : discountType,
-    discount_value: discountValue || null,
-    subtotal,
-    tax_rate: TAX_RATE,
-    tax_amount: taxAmount,
-    total,
-    amount_paid: 0,
-    balance_due: total,
-    notes,
-    internal_notes: internalNotes,
-  }
+  const finalDiscountType = discountType === 'none' ? null : discountType
+  const finalDiscountValue = discountValue || null
 
-  const { data, error } = await supabase
-    .from('reservations')
-    .insert(reservationData)
-    .select()
-    .single()
+  let data: { id: string }
 
-  if (error) {
+  try {
+    const rows = await sql`
+      INSERT INTO reservations (
+        reservation_number, guest_id, room_id, check_in_date, check_out_date,
+        nights, adults, children, status, payment_status, booking_channel,
+        channel_reference, nightly_rate, discount_type, discount_value,
+        subtotal, tax_rate, tax_amount, total, amount_paid, balance_due,
+        notes, internal_notes
+      ) VALUES (
+        ${reservationNumber}, ${guestId}, ${roomId}, ${checkInDate}, ${checkOutDate},
+        ${nights}, ${adults}, ${children}, 'pending', 'unpaid', ${bookingChannel},
+        ${channelReference}, ${nightlyRate}, ${finalDiscountType}, ${finalDiscountValue},
+        ${subtotal}, ${TAX_RATE}, ${taxAmount}, ${total}, ${0}, ${total},
+        ${notes}, ${internalNotes}
+      ) RETURNING id
+    `
+    data = rows[0] as { id: string }
+  } catch (error) {
     console.error('Error creating reservation:', error)
     return { error: 'Error al crear la reservación. Intente de nuevo.' }
   }
@@ -283,62 +308,35 @@ export async function createReservation(formData: FormData) {
 }
 
 export async function updateReservationStatus(id: string, status: string) {
-  const supabase = await createClient()
+  const sql = getDb()
 
-  const updateData: Record<string, unknown> = { status }
+  try {
+    // Update reservation status with conditional timestamp fields
+    const rows = await sql`
+      UPDATE reservations SET
+        status = ${status},
+        actual_check_in = CASE WHEN ${status} = 'checked_in' THEN NOW() ELSE actual_check_in END,
+        actual_check_out = CASE WHEN ${status} = 'checked_out' THEN NOW() ELSE actual_check_out END,
+        cancelled_at = CASE WHEN ${status} = 'cancelled' THEN NOW() ELSE cancelled_at END,
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING room_id
+    `
 
-  if (status === 'checked_in') {
-    updateData.actual_check_in = new Date().toISOString()
-  }
+    const roomId = rows[0]?.room_id
 
-  if (status === 'checked_out') {
-    updateData.actual_check_out = new Date().toISOString()
-  }
+    // On check-out, update room status to available and mark dirty
+    if (status === 'checked_out' && roomId) {
+      await sql`UPDATE rooms SET status = 'available', cleaning_status = 'dirty' WHERE id = ${roomId}`
+    }
 
-  if (status === 'cancelled') {
-    updateData.cancelled_at = new Date().toISOString()
-  }
-
-  const { error } = await supabase
-    .from('reservations')
-    .update(updateData)
-    .eq('id', id)
-
-  if (error) {
+    // On check-in, update room status to occupied
+    if (status === 'checked_in' && roomId) {
+      await sql`UPDATE rooms SET status = 'occupied' WHERE id = ${roomId}`
+    }
+  } catch (error) {
     console.error('Error updating reservation status:', error)
     return { error: 'Error al actualizar el estado.' }
-  }
-
-  // On check-out, update room status
-  if (status === 'checked_out') {
-    const { data: reservation } = await supabase
-      .from('reservations')
-      .select('room_id')
-      .eq('id', id)
-      .single()
-
-    if (reservation) {
-      await supabase
-        .from('rooms')
-        .update({ status: 'available', cleaning_status: 'dirty' })
-        .eq('id', reservation.room_id)
-    }
-  }
-
-  // On check-in, update room status to occupied
-  if (status === 'checked_in') {
-    const { data: reservation } = await supabase
-      .from('reservations')
-      .select('room_id')
-      .eq('id', id)
-      .single()
-
-    if (reservation) {
-      await supabase
-        .from('rooms')
-        .update({ status: 'occupied' })
-        .eq('id', reservation.room_id)
-    }
   }
 
   revalidatePath('/reservaciones')
