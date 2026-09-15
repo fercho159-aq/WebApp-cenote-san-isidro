@@ -27,7 +27,7 @@ export default async function SalidasPage() {
     <div className="space-y-6">
       <PageHeader
         title="Salidas de hoy"
-        description={todayFormatted}
+        description={`Huéspedes que salen hoy (${todayFormatted}). Verifica pagos pendientes antes de realizar el check-out.`}
       >
         <Link href="/reservaciones/calendario">
           <Button variant="outline" size="sm">

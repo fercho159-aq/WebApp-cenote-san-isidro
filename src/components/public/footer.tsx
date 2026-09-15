@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 
 export function Footer() {
   return (
@@ -7,14 +8,14 @@ export function Footer() {
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand */}
           <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#8B6914] text-white font-bold text-xs">
-                CS
-              </div>
-              <div>
-                <p className="font-bold text-[#D4A843]">Cenote San Isidro</p>
-                <p className="text-[10px] text-gray-400 uppercase tracking-widest">La Mini Rivera Maya</p>
-              </div>
+            <div className="mb-4">
+              <Image
+                src="https://cenotesanisidro.com/wp-content/uploads/2021/07/cenote-san-isidro-logo.png"
+                alt="Cenote San Isidro"
+                width={120}
+                height={53}
+                className="h-auto w-[120px] brightness-0 invert"
+              />
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">
               Disfruta la experiencia de un cenote natural rodeado de naturaleza, cabañas y la mejor comida.

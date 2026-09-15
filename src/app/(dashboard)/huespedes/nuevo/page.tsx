@@ -8,7 +8,7 @@ import { GuestForm } from '@/components/guests/guest-form'
 export default function NuevoHuespedPage() {
   return (
     <div className="space-y-6">
-      <PageHeader title="Nuevo huésped" description="Registrar un nuevo huésped">
+      <PageHeader title="Nuevo huésped" description="Captura nombre, correo, teléfono y datos del huésped. Si ya tiene reservaciones previas, aparecerá en el directorio automáticamente.">
         <Button variant="outline" asChild>
           <Link href="/huespedes">
             <ArrowLeft className="h-4 w-4" />

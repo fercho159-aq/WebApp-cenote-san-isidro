@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
@@ -30,18 +31,19 @@ export function Navbar() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-20 items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#8B6914] text-white font-bold text-sm">
-              CS
-            </div>
-            <div className="hidden sm:block">
-              <p className="text-lg font-bold text-[#8B6914] leading-tight">Cenote San Isidro</p>
-              <p className="text-[10px] text-gray-500 uppercase tracking-widest">La Mini Rivera Maya</p>
-            </div>
+          <Link href="/" className="flex items-center">
+            <Image
+              src="https://cenotesanisidro.com/wp-content/uploads/2021/07/cenote-san-isidro-logo.png"
+              alt="Cenote San Isidro"
+              width={140}
+              height={62}
+              className="h-auto w-[140px]"
+              priority
+            />
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden lg:flex items-center gap-1">
+          <nav className="hidden lg:flex items-center gap-1 font-body">
             {navLinks.map((link) => (
               <Link
                 key={link.href}

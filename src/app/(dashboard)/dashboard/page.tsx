@@ -40,8 +40,9 @@ export default async function DashboardPage() {
     <div className="space-y-6">
       {/* Page header */}
       <div>
+        <h1 className="text-2xl font-bold tracking-tight">Panel principal</h1>
         <p className="text-sm text-muted-foreground">
-          Principales estadísticas de tu alojamiento
+          Vista general del cenote: ocupación actual, llegadas y salidas del día, ingresos recientes y estado de cada cabaña.
         </p>
       </div>
 

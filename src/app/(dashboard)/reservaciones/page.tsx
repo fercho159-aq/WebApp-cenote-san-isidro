@@ -27,7 +27,7 @@ export default async function ReservacionesPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Reservaciones" description="Gestiona las reservaciones del cenote">
+      <PageHeader title="Reservaciones" description="Consulta, crea y administra todas las reservaciones. Filtra por estado, fechas o nombre del huésped. Desde aquí puedes registrar pagos y cargos extras.">
         <Link href="/reservaciones/nueva">
           <Button>
             <Plus className="h-4 w-4" />

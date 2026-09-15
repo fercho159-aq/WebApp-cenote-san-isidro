@@ -9,7 +9,7 @@ export default function CalendarioPage() {
     <div className="space-y-6">
       <PageHeader
         title="Calendario de reservaciones"
-        description="Vista de calendario con todas las cabanas y reservaciones"
+        description="Vista mensual de ocupación: cada fila es una cabaña y cada bloque de color es una reservación. Haz clic en un espacio vacío para reservar."
       >
         <Link href="/reservaciones">
           <Button variant="outline" size="sm">

@@ -18,7 +18,7 @@ export default async function ProveedoresPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Proveedores" description="Directorio de proveedores">
+      <PageHeader title="Proveedores" description="Directorio de proveedores con datos de contacto, RFC y notas. Registra a quienes surten productos, servicios o materiales al cenote.">
         <Button asChild>
           <Link href="/proveedores/nuevo">
             <Plus className="h-4 w-4" />

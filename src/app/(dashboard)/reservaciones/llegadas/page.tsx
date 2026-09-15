@@ -30,7 +30,7 @@ export default async function LlegadasPage() {
     <div className="space-y-6">
       <PageHeader
         title="Llegadas de hoy"
-        description={todayFormatted}
+        description={`Huéspedes que llegan hoy (${todayFormatted}). Realiza el check-in para registrar su entrada.`}
       >
         <Link href="/reservaciones/calendario">
           <Button variant="outline" size="sm">

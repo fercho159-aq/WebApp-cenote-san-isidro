@@ -56,7 +56,7 @@ async function DailyContent({
     <>
       <PageHeader
         title="Control diario"
-        description={dateFormatted}
+        description={`Resumen del día ${dateFormatted}: llegadas, salidas, cabañas ocupadas, ingresos y pagos pendientes. Tu vista rápida para el turno.`}
       >
         <DailyDatePicker currentDate={date} />
       </PageHeader>

@@ -29,7 +29,7 @@ export default async function ConfiguracionPage() {
     <div className="space-y-8">
       <PageHeader
         title="Configuración"
-        description="Administra la propiedad, usuarios e impuestos"
+        description="Administra los datos de la propiedad, gestiona usuarios del sistema (recepcionistas, administradores) y configura impuestos y preferencias generales."
       />
 
       {/* Property Settings */}

@@ -15,8 +15,8 @@ export default async function CategoriasPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Categorias de cabanas"
-        description="Gestiona los tipos de cabanas y sus tarifas"
+        title="Categorías de cabañas"
+        description="Define los tipos de cabañas (Estándar, Superior, Deluxe, etc.) con su precio base por noche, capacidad máxima y descripción."
       >
         <Button asChild>
           <Link href="/cabanas/categorias/nueva">

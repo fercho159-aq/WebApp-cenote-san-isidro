@@ -17,7 +17,7 @@ export default function RegistrosPage({
     <div className="space-y-6">
       <PageHeader
         title="Registros de auditoría"
-        description="Historial de cambios y acciones en el sistema"
+        description="Bitácora de todas las acciones realizadas en el sistema: quién creó, editó o canceló reservaciones, pagos y otros registros. Útil para supervisión y control interno."
       />
       <Suspense fallback={<AuditSkeleton />}>
         <AuditContent searchParamsPromise={searchParams} />

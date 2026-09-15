@@ -12,8 +12,8 @@ export default async function CabanasPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Cabanas"
-        description="Gestiona las 12 cabanas del cenote"
+        title="Cabañas"
+        description="Agrega, edita o elimina cabañas y gestiona sus categorías y tarifas. Cada cabaña se asigna a una categoría con precio base por noche."
       >
         <Button variant="outline" size="sm" asChild>
           <Link href="/cabanas/categorias">

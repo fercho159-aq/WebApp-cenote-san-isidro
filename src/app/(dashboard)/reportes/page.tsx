@@ -21,7 +21,7 @@ export default function ReportesPage({
     <div className="space-y-6">
       <PageHeader
         title="Reportes"
-        description="Analiza ocupación, ingresos, reservaciones y huéspedes"
+        description="Genera reportes detallados de ocupación, ingresos, reservaciones y huéspedes. Selecciona un rango de fechas para analizar el rendimiento del cenote."
       />
       <Suspense fallback={<ReportsSkeleton />}>
         <ReportsContent searchParamsPromise={searchParams} />

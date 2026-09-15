@@ -134,6 +134,12 @@
   --destructive-foreground: #ffffff;
 }
 
+/* ─── Font variables ─── */
+:root {
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+}
+
 /* ─── Tailwind v4 theme extension ─── */
 @theme inline {
   --color-primary: var(--primary);
@@ -187,6 +193,14 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, 'Times New Roman', serif;
+}
+
+.font-body {
+  font-family: var(--font-body), system-ui, -apple-system, sans-serif;
 }
 
 /* Smooth scrolling */

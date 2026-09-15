@@ -16,7 +16,7 @@ export default async function NuevoGastoPage() {
     <div className="space-y-6">
       <PageHeader
         title="Registrar gasto"
-        description="Registrar un nuevo gasto operativo"
+        description="Captura el monto, categoría, proveedor y comprobante del gasto. Los gastos se reflejan en los reportes financieros del cenote."
       >
         <Button variant="outline" asChild>
           <Link href="/gastos">

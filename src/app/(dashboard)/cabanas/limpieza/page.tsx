@@ -9,7 +9,7 @@ export default async function LimpiezaPage() {
     <div className="space-y-6">
       <PageHeader
         title="Housekeeping"
-        description="Estado de limpieza de cabanas"
+        description="Tablero de limpieza: marca cada cabaña como limpia, en proceso o pendiente. Útil para coordinar al personal de limpieza entre check-outs y check-ins."
       />
 
       <CleaningBoard rooms={rooms} />

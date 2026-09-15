@@ -56,7 +56,7 @@ export default async function GuestProfilePage({
     <div className="space-y-6">
       <PageHeader
         title={`${guest.first_name} ${guest.last_name}`}
-        description="Perfil de huésped"
+        description="Información de contacto, historial de reservaciones y notas del huésped"
       >
         <Button variant="outline" asChild>
           <Link href="/huespedes">

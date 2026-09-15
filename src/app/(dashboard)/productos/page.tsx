@@ -38,7 +38,7 @@ export default async function ProductosPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Productos" description="Gestiona productos y categorias">
+      <PageHeader title="Productos" description="Administra los productos que se venden en el punto de venta: alimentos, bebidas, artículos de tienda, etc. Define precios, costos y categorías.">
         <Button asChild>
           <Link href="/productos/nuevo">
             <Plus className="h-4 w-4" />

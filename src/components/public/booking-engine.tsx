@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { checkAvailability, getPublicPackages, createPublicReservation } from "@/actions/public-booking";
+import { checkAvailability, getPublicPackages, createPublicReservation, recordBookingPayment } from "@/actions/public-booking";
 
-type Step = "dates" | "room" | "packages" | "guest" | "confirm" | "success";
+type Step = "dates" | "room" | "packages" | "guest" | "confirm" | "payment" | "success";
 
 interface AvailableRoom {
   id: string;
@@ -69,11 +69,18 @@ export function BookingEngine() {
   // Result
   const [result, setResult] = useState<{
     reservationNumber: string;
+    reservationId: string;
     total: number;
     nights: number;
     nightlyRate: number;
     packagesTotal: number;
   } | null>(null);
+
+  // Payment
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "transfer" | "cash" | null>(null);
+  const [cardNumber, setCardNumber] = useState("");
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
+  const [paymentMethodUsed, setPaymentMethodUsed] = useState<string | null>(null);
 
   const today = new Date().toISOString().split("T")[0];
   const nights = checkIn && checkOut
@@ -158,12 +165,13 @@ export function BookingEngine() {
       } else {
         setResult({
           reservationNumber: res.reservationNumber!,
+          reservationId: res.reservationId!,
           total: res.total!,
           nights: res.nights!,
           nightlyRate: res.nightlyRate!,
           packagesTotal: res.packagesTotal!,
         });
-        setStep("success");
+        setStep("payment");
       }
     } catch {
       setError("Error al crear la reservación.");
@@ -187,24 +195,80 @@ export function BookingEngine() {
     }
   }
 
+  async function handlePayment() {
+    if (!result) return;
+    setError("");
+
+    if (paymentMethod === "card") {
+      const digits = cardNumber.replace(/\s/g, "");
+      if (!/^\d{16}$/.test(digits)) {
+        setError("Ingresa un número de tarjeta válido (16 dígitos).");
+        return;
+      }
+    }
+
+    setLoading(true);
+    try {
+      if (paymentMethod === "cash") {
+        // "Pagar al llegar" - record a $0 payment, status stays pending
+        const res = await recordBookingPayment({
+          reservationId: result.reservationId,
+          amount: 0,
+          method: "cash",
+          reference: "Pago al llegar",
+        });
+        if (res.error) {
+          setError(res.error);
+        } else {
+          setPaymentCompleted(false);
+          setPaymentMethodUsed("cash");
+          setStep("success");
+        }
+      } else {
+        // card or transfer - simulate full payment
+        const reference = paymentMethod === "card"
+          ? `CARD-****${cardNumber.replace(/\s/g, "").slice(-4)}`
+          : `TRANSF-${Date.now()}`;
+        const res = await recordBookingPayment({
+          reservationId: result.reservationId,
+          amount: result.total,
+          method: paymentMethod!,
+          reference,
+        });
+        if (res.error) {
+          setError(res.error);
+        } else {
+          setPaymentCompleted(true);
+          setPaymentMethodUsed(paymentMethod);
+          setStep("success");
+        }
+      }
+    } catch {
+      setError("Error al procesar el pago.");
+    }
+    setLoading(false);
+  }
+
   return (
     <div>
       {/* Progress Steps */}
-      <div className="flex items-center justify-center gap-2 mb-8">
+      <div className="flex items-center justify-center gap-2 mb-8 flex-wrap">
         {[
           { key: "dates", label: "1. Fechas" },
           { key: "room", label: "2. Cabaña" },
           { key: "packages", label: "3. Paquetes" },
           { key: "guest", label: "4. Datos" },
+          { key: "payment", label: "5. Pago" },
         ].map((s, i) => {
-          const steps: Step[] = ["dates", "room", "packages", "guest"];
-          const currentIdx = steps.indexOf(step === "confirm" ? "guest" : step === "success" ? "guest" : step);
+          const steps: Step[] = ["dates", "room", "packages", "guest", "payment"];
+          const mappedStep = step === "confirm" ? "guest" : step === "success" ? "payment" : step;
+          const currentIdx = steps.indexOf(mappedStep as Step);
           const stepIdx = i;
           const isActive = stepIdx <= currentIdx;
           return (
             <div key={s.key} className="flex items-center gap-2">
               {i > 0 && (
-                <div className={`h-px w-6 sm:w-12 ${isActive ? "bg-[#0a3d2f]" : "bg-gray-300"}`} />
+                <div className={`h-px w-4 sm:w-8 ${isActive ? "bg-[#0a3d2f]" : "bg-gray-300"}`} />
               )}
               <div className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${
                 isActive ? "bg-[#0a3d2f] text-white" : "bg-gray-200 text-gray-500"
@@ -514,7 +578,167 @@ export function BookingEngine() {
         </div>
       )}
 
-      {/* Step 5: Success */}
+      {/* Step 5: Payment */}
+      {step === "payment" && result && (
+        <div className="rounded-2xl bg-white p-8 shadow-sm border border-gray-200">
+          <h2 className="text-xl font-bold font-display text-gray-900 mb-2">Método de pago</h2>
+          <p className="text-sm font-body text-gray-500 mb-6">
+            Reservación <span className="font-semibold text-[#0a3d2f]">{result.reservationNumber}</span> — Total a pagar: <span className="font-bold text-gray-900">{formatMXN(result.total)}</span>
+          </p>
+
+          {/* Payment method cards */}
+          <div className="grid gap-3 mb-6">
+            {/* Card option */}
+            <button
+              type="button"
+              onClick={() => { setPaymentMethod("card"); setError(""); }}
+              className={`flex items-center gap-4 rounded-xl border-2 p-4 text-left transition-all ${
+                paymentMethod === "card"
+                  ? "border-[#D4A843] bg-[#D4A843]/5"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                paymentMethod === "card" ? "bg-[#D4A843] text-white" : "bg-gray-100 text-gray-500"
+              }`}>
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold font-body text-gray-900">Tarjeta de crédito/débito</p>
+                <p className="text-xs text-gray-500">Pago inmediato simulado</p>
+              </div>
+            </button>
+
+            {/* Transfer option */}
+            <button
+              type="button"
+              onClick={() => { setPaymentMethod("transfer"); setError(""); }}
+              className={`flex items-center gap-4 rounded-xl border-2 p-4 text-left transition-all ${
+                paymentMethod === "transfer"
+                  ? "border-[#D4A843] bg-[#D4A843]/5"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                paymentMethod === "transfer" ? "bg-[#D4A843] text-white" : "bg-gray-100 text-gray-500"
+              }`}>
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold font-body text-gray-900">Transferencia bancaria</p>
+                <p className="text-xs text-gray-500">Pago por SPEI o transferencia</p>
+              </div>
+            </button>
+
+            {/* Cash / pay on arrival option */}
+            <button
+              type="button"
+              onClick={() => { setPaymentMethod("cash"); setError(""); }}
+              className={`flex items-center gap-4 rounded-xl border-2 p-4 text-left transition-all ${
+                paymentMethod === "cash"
+                  ? "border-[#D4A843] bg-[#D4A843]/5"
+                  : "border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
+                paymentMethod === "cash" ? "bg-[#D4A843] text-white" : "bg-gray-100 text-gray-500"
+              }`}>
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold font-body text-gray-900">Pagar al llegar</p>
+                <p className="text-xs text-gray-500">La reservación queda pendiente de pago</p>
+              </div>
+            </button>
+          </div>
+
+          {/* Card form (simulated) */}
+          {paymentMethod === "card" && (
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 mb-6">
+              <h3 className="text-sm font-semibold font-body text-gray-900 mb-4">Datos de tarjeta (simulado)</h3>
+              <div>
+                <label className="block text-sm font-medium font-body text-gray-700 mb-1">Número de tarjeta</label>
+                <input
+                  type="text"
+                  value={cardNumber}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, "").slice(0, 16);
+                    const formatted = val.replace(/(\d{4})(?=\d)/g, "$1 ");
+                    setCardNumber(formatted);
+                    setError("");
+                  }}
+                  placeholder="0000 0000 0000 0000"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-mono tracking-wider focus:border-[#0a3d2f] focus:ring-1 focus:ring-[#0a3d2f] focus:outline-none"
+                  maxLength={19}
+                />
+                <p className="text-xs text-gray-400 mt-1">Ingresa cualquier número de 16 dígitos (simulación)</p>
+              </div>
+            </div>
+          )}
+
+          {/* Transfer details */}
+          {paymentMethod === "transfer" && (
+            <div className="rounded-xl border border-[#0a3d2f]/20 bg-[#0a3d2f]/5 p-5 mb-6">
+              <h3 className="text-sm font-semibold font-body text-gray-900 mb-3">Datos para transferencia</h3>
+              <div className="space-y-2 text-sm font-body">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">CLABE:</span>
+                  <span className="font-mono font-medium text-gray-900">012345678901234567</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Banco:</span>
+                  <span className="font-medium text-gray-900">BBVA</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Beneficiario:</span>
+                  <span className="font-medium text-gray-900">Cenote San Isidro</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Monto:</span>
+                  <span className="font-bold text-[#0a3d2f]">{formatMXN(result.total)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Referencia:</span>
+                  <span className="font-medium text-gray-900">{result.reservationNumber}</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-3">Al hacer clic en "Pagar" se registrará el pago como realizado (simulación).</p>
+            </div>
+          )}
+
+          {/* Cash info */}
+          {paymentMethod === "cash" && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-5 mb-6">
+              <p className="text-sm font-body text-amber-800">
+                Tu reservación quedará en estado <span className="font-semibold">pendiente de pago</span>. Podrás realizar el pago al momento de tu llegada al Cenote San Isidro.
+              </p>
+            </div>
+          )}
+
+          {paymentMethod && (
+            <button
+              onClick={handlePayment}
+              disabled={loading}
+              className="w-full rounded-xl bg-[#D4A843] px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-[#c49a3a] disabled:opacity-50"
+            >
+              {loading
+                ? "Procesando..."
+                : paymentMethod === "cash"
+                  ? "Confirmar sin pago"
+                  : `Pagar ${formatMXN(result.total)}`
+              }
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Step 6: Success */}
       {step === "success" && result && (
         <div className="rounded-2xl bg-white p-8 shadow-sm border border-gray-200 text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
@@ -522,13 +746,41 @@ export function BookingEngine() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">¡Reservación confirmada!</h2>
-          <p className="text-gray-600 mb-6">Tu número de reservación es:</p>
-          <p className="text-3xl font-bold text-[#0a3d2f] mb-6">{result.reservationNumber}</p>
+          <h2 className="text-2xl font-bold font-display text-gray-900 mb-2">
+            {paymentCompleted ? "¡Reservación confirmada y pagada!" : "¡Reservación registrada!"}
+          </h2>
+          <p className="text-gray-600 font-body mb-6">Tu número de reservación es:</p>
+          <p className="text-3xl font-bold font-display text-[#0a3d2f] mb-6">{result.reservationNumber}</p>
+
+          {/* Payment status badge */}
+          {paymentMethodUsed && (
+            <div className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold font-body mb-6 ${
+              paymentCompleted
+                ? "bg-green-100 text-green-800"
+                : "bg-amber-100 text-amber-800"
+            }`}>
+              {paymentCompleted ? (
+                <>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {paymentMethodUsed === "card" ? "Pagado con tarjeta" : "Pagado por transferencia"}
+                </>
+              ) : (
+                <>
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Pendiente de pago — pagar al llegar
+                </>
+              )}
+            </div>
+          )}
+
           <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 text-left mb-6">
-            <div className="space-y-2 text-sm">
+            <div className="space-y-2 text-sm font-body">
               <div className="flex justify-between">
-                <span className="text-gray-600">{selectedRoom?.name} × {result.nights} noche{result.nights > 1 ? "s" : ""}</span>
+                <span className="text-gray-600">{selectedRoom?.name} x {result.nights} noche{result.nights > 1 ? "s" : ""}</span>
                 <span className="font-medium">{formatMXN(result.nightlyRate * result.nights)}</span>
               </div>
               {result.packagesTotal > 0 && (
@@ -541,10 +793,18 @@ export function BookingEngine() {
                 <span>Total</span>
                 <span className="text-[#0a3d2f]">{formatMXN(result.total)}</span>
               </div>
+              {paymentCompleted && (
+                <div className="flex justify-between pt-2 border-t border-gray-200 text-green-700 font-semibold">
+                  <span>Pagado</span>
+                  <span>{formatMXN(result.total)}</span>
+                </div>
+              )}
             </div>
           </div>
-          <p className="text-sm text-gray-500">
-            Te enviaremos los detalles a tu correo electrónico. Para cualquier duda, contáctanos por WhatsApp.
+          <p className="text-sm font-body text-gray-500">
+            {paymentCompleted
+              ? "Te enviaremos los detalles y tu comprobante de pago a tu correo electrónico. Para cualquier duda, contáctanos por WhatsApp."
+              : "Te enviaremos los detalles a tu correo electrónico. Recuerda realizar tu pago al llegar al Cenote San Isidro."}
           </p>
         </div>
       )}

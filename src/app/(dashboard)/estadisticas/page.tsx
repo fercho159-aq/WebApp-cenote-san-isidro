@@ -220,7 +220,7 @@ export default async function EstadisticasPage() {
     <div className="space-y-6">
       <PageHeader
         title="Estadísticas"
-        description={`Resumen del mes de ${monthName}`}
+        description={`Indicadores clave del negocio: ocupación, ingresos, tarifa promedio y estancia media. Compara el rendimiento mes a mes. Resumen de ${monthName}.`}
       />
 
       {/* KPI Cards */}

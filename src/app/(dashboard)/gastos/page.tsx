@@ -47,7 +47,7 @@ export default async function GastosPage({
     <div className="space-y-6">
       <PageHeader
         title="Gastos"
-        description="Control de gastos operativos"
+        description="Registra y controla todos los gastos operativos del cenote: mantenimiento, servicios, nómina, insumos y más. Filtra por categoría y rango de fechas."
       >
         <Button asChild>
           <Link href="/gastos/nuevo">

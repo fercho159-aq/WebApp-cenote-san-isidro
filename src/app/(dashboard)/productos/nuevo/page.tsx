@@ -10,7 +10,7 @@ export default async function NuevoProductoPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Nuevo producto" description="Registrar un nuevo producto">
+      <PageHeader title="Nuevo producto" description="Agrega un producto al catálogo de venta: nombre, categoría, precio, costo y código SKU opcional.">
         <Button variant="outline" asChild>
           <Link href="/productos">
             <ArrowLeft className="h-4 w-4" />

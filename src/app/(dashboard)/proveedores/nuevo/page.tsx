@@ -10,7 +10,7 @@ export default function NuevoProveedorPage() {
     <div className="space-y-6">
       <PageHeader
         title="Nuevo proveedor"
-        description="Registrar un nuevo proveedor"
+        description="Agrega un proveedor con nombre, RFC, datos de contacto y notas. Podrás asociarlo a gastos y compras."
       >
         <Button variant="outline" asChild>
           <Link href="/proveedores">

@@ -158,7 +158,10 @@ export function PosTerminal({
       <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card">
         {/* Header with tabs */}
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <h1 className="text-lg font-bold text-foreground">Punto de venta</h1>
+          <div>
+            <h1 className="text-lg font-bold text-foreground">Punto de venta</h1>
+            <p className="text-xs text-muted-foreground">Cobra productos, alimentos y bebidas. Puedes cargar a la cuenta de una cabaña ocupada o cobrar directamente.</p>
+          </div>
           <Button
             variant={showHistory ? 'default' : 'outline'}
             size="sm"

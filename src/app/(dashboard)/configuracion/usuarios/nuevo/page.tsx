@@ -35,7 +35,7 @@ export default function NuevoUsuarioPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Nuevo usuario" description="Crear una cuenta de usuario">
+      <PageHeader title="Nuevo usuario" description="Crea una cuenta para un recepcionista o administrador. El usuario podrá iniciar sesión en el sistema con su correo y contraseña.">
         <Link href="/configuracion">
           <Button variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4" />

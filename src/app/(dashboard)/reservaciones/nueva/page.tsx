@@ -11,8 +11,8 @@ export default async function NuevaReservacionPage({
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader
-        title="Nueva reservacion"
-        description="Crea una nueva reservacion para el cenote"
+        title="Nueva reservación"
+        description="Selecciona fechas, cabaña disponible y datos del huésped para crear una nueva reservación. El sistema calcula automáticamente noches, impuestos y total."
       />
       <ReservationForm
         prefilledRoomId={params.room}

@@ -212,3 +212,37 @@ export async function createPublicReservation(data: {
     return { error: 'Error al crear la reservación. Intente de nuevo.' }
   }
 }
+
+export async function recordBookingPayment(data: {
+  reservationId: string
+  amount: number
+  method: string // 'card' | 'transfer' | 'cash'
+  reference?: string
+}) {
+  const sql = getDb()
+  try {
+    // Record the payment
+    await sql`
+      INSERT INTO payments (reservation_id, amount, payment_method, reference_number, notes)
+      VALUES (${data.reservationId}, ${data.amount}, ${data.method}, ${data.reference || null}, ${'Pago desde booking engine'})
+    `
+
+    // Update the reservation's amount_paid and payment_status
+    await sql`
+      UPDATE reservations
+      SET amount_paid = amount_paid + ${data.amount},
+          payment_status = CASE
+            WHEN amount_paid + ${data.amount} >= total THEN 'paid'
+            WHEN amount_paid + ${data.amount} > 0 THEN 'partial'
+            ELSE 'unpaid'
+          END,
+          status = 'confirmed'
+      WHERE id = ${data.reservationId}
+    `
+
+    return { success: true }
+  } catch (error) {
+    console.error('Error recording payment:', error)
+    return { error: 'Error al procesar el pago.' }
+  }
+}

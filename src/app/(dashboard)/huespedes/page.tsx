@@ -18,7 +18,7 @@ export default async function HuespedesPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Huéspedes" description="Directorio de huéspedes">
+      <PageHeader title="Huéspedes" description="Directorio de todos los huéspedes que han reservado. Busca por nombre, correo o teléfono y consulta su historial de estancias.">
         <Button asChild>
           <Link href="/huespedes/nuevo">
             <Plus className="h-4 w-4" />
