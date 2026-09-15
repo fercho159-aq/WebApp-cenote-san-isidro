@@ -14,7 +14,14 @@ import {
   PaymentStatusBadge,
 } from '@/components/reservations/status-badge'
 import { ReservationStatusActions } from '@/components/reservations/reservation-status-actions'
+import { PaymentList } from '@/components/reservations/payment-list'
+import { PaymentForm } from '@/components/reservations/payment-form'
+import { ChargeForm } from '@/components/reservations/charge-form'
 import { getReservationById } from '@/actions/reservations'
+import {
+  getPaymentsByReservation,
+  getChargesByReservation,
+} from '@/actions/payments'
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/formatters'
 import { BOOKING_CHANNELS } from '@/lib/constants'
 import type { ReservationStatus, PaymentStatus, BookingChannel } from '@/types'
@@ -27,6 +34,8 @@ import {
   Home,
   Users,
   Hash,
+  CreditCard,
+  Receipt,
 } from 'lucide-react'
 
 export default async function ReservacionDetailPage({
@@ -41,8 +50,18 @@ export default async function ReservacionDetailPage({
     notFound()
   }
 
+  const [payments, charges] = await Promise.all([
+    getPaymentsByReservation(id),
+    getChargesByReservation(id),
+  ])
+
   const guest = reservation.guest
   const room = reservation.room
+
+  const activePaymentsTotal = payments
+    .filter((p) => !p.voided)
+    .reduce((sum, p) => sum + Number(p.amount), 0)
+  const chargesTotal = charges.reduce((sum, c) => sum + Number(c.amount), 0)
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -387,6 +406,144 @@ export default async function ReservacionDetailPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Pagos */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CreditCard className="h-5 w-5 text-primary" />
+            Pagos
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Resumen de pagos */}
+          <div className="rounded-lg border border-border bg-muted/50 p-4">
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-lg font-semibold text-foreground">
+                  {formatCurrency(reservation.total)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Pagado</p>
+                <p className="text-lg font-semibold text-emerald-600">
+                  {formatCurrency(activePaymentsTotal)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Saldo pendiente</p>
+                <p
+                  className={`text-lg font-semibold ${
+                    reservation.balance_due > 0
+                      ? 'text-red-600'
+                      : 'text-emerald-600'
+                  }`}
+                >
+                  {formatCurrency(reservation.balance_due)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Lista de pagos */}
+          <PaymentList payments={payments} />
+
+          {/* Formulario de nuevo pago */}
+          <Separator />
+          <div>
+            <h3 className="mb-4 text-sm font-semibold text-foreground">
+              Registrar nuevo pago
+            </h3>
+            <PaymentForm
+              reservationId={reservation.id}
+              balanceDue={reservation.balance_due}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Cargos Extra */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Receipt className="h-5 w-5 text-primary" />
+            Cargos Extra
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Lista de cargos */}
+          {charges.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left">
+                    <th className="pb-2 font-medium text-muted-foreground">
+                      Fecha
+                    </th>
+                    <th className="pb-2 font-medium text-muted-foreground">
+                      Descripcion
+                    </th>
+                    <th className="pb-2 font-medium text-muted-foreground">
+                      Tipo
+                    </th>
+                    <th className="pb-2 text-right font-medium text-muted-foreground">
+                      Monto
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {charges.map((charge) => (
+                    <tr
+                      key={charge.id}
+                      className="border-b border-border/50"
+                    >
+                      <td className="py-3 text-muted-foreground">
+                        {formatDateTime(charge.created_at)}
+                      </td>
+                      <td className="py-3 text-foreground">
+                        {charge.description}
+                      </td>
+                      <td className="py-3 text-muted-foreground">
+                        {charge.charge_type || '-'}
+                      </td>
+                      <td className="py-3 text-right font-medium text-foreground">
+                        {formatCurrency(charge.amount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-border">
+                    <td
+                      colSpan={3}
+                      className="py-3 text-right font-semibold text-foreground"
+                    >
+                      Total cargos extra:
+                    </td>
+                    <td className="py-3 text-right font-semibold text-foreground">
+                      {formatCurrency(chargesTotal)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          ) : (
+            <p className="py-4 text-center text-sm text-muted-foreground">
+              No hay cargos extra registrados.
+            </p>
+          )}
+
+          {/* Formulario de nuevo cargo */}
+          <Separator />
+          <div>
+            <h3 className="mb-4 text-sm font-semibold text-foreground">
+              Agregar cargo extra
+            </h3>
+            <ChargeForm reservationId={reservation.id} />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -62,6 +62,7 @@ export interface Room {
   category_id: string
   status: RoomStatus
   cleaning_status: CleaningStatus
+  floor: string | null
   notes: string | null
   sort_order: number
   // Relations
@@ -131,10 +132,13 @@ export interface Payment {
   reservation_id: string
   amount: number
   payment_method: PaymentMethod
-  reference: string | null
+  reference_number: string | null
+  payment_date: string
   notes: string | null
-  received_by: string | null
-  cash_register_id: string | null
+  voided: boolean
+  voided_at: string | null
+  voided_reason: string | null
+  created_by: string | null
   created_at: string
   // Relations
   reservation?: Reservation
@@ -145,12 +149,22 @@ export interface Charge {
   reservation_id: string
   description: string
   amount: number
-  quantity: number
-  total: number
+  charge_type: string | null
   created_by: string | null
   created_at: string
   // Relations
   reservation?: Reservation
+}
+
+export interface Refund {
+  id: string
+  payment_id: string
+  amount: number
+  reason: string
+  created_by: string | null
+  created_at: string
+  // Relations
+  payment?: Payment
 }
 
 export interface Task {
@@ -197,4 +211,104 @@ export interface CashRegister {
   // Relations
   opener?: Profile
   closer?: Profile
+}
+
+export interface Supplier {
+  id: string
+  name: string
+  contact_name: string | null
+  phone: string | null
+  email: string | null
+  rfc: string | null
+  address: string | null
+  notes: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ExpenseCategory {
+  id: string
+  name: string
+  description: string | null
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface Expense {
+  id: string
+  category_id: string
+  supplier_id: string | null
+  description: string
+  amount: number
+  expense_date: string
+  payment_method: string | null
+  reference: string | null
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+  // Relations
+  category?: ExpenseCategory
+  supplier?: Supplier
+}
+
+// ---- Products & POS ----
+
+export type SaleStatus = 'completed' | 'voided'
+
+export interface ProductCategory {
+  id: string
+  name: string
+  description: string | null
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface Product {
+  id: string
+  category_id: string
+  name: string
+  description: string | null
+  price: number
+  cost: number
+  sku: string | null
+  track_inventory: boolean
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+  // Relations
+  category?: ProductCategory
+}
+
+export interface PosSale {
+  id: string
+  sale_number: string
+  reservation_id: string | null
+  payment_method: PaymentMethod
+  subtotal: number
+  tax_amount: number
+  total: number
+  status: SaleStatus
+  notes: string | null
+  created_by: string | null
+  created_at: string
+  // Relations
+  items?: PosSaleItem[]
+  reservation?: Reservation
+}
+
+export interface PosSaleItem {
+  id: string
+  sale_id: string
+  product_id: string
+  quantity: number
+  unit_price: number
+  total_price: number
+  // Relations
+  product?: Product
 }

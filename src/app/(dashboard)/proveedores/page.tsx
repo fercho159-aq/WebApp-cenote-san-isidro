@@ -1,19 +1,58 @@
-import { Building2 } from "lucide-react"
-import { PageHeader } from "@/components/shared/page-header"
-import { EmptyState } from "@/components/shared/empty-state"
+import { Suspense } from 'react'
+import Link from 'next/link'
+import { Plus, Building2 } from 'lucide-react'
+import { getSuppliers } from '@/actions/suppliers'
+import { PageHeader } from '@/components/shared/page-header'
+import { EmptyState } from '@/components/shared/empty-state'
+import { Button } from '@/components/ui/button'
+import { SupplierSearch } from '@/components/suppliers/supplier-search'
+import { SupplierTable } from '@/components/suppliers/supplier-table'
 
-export default function ProveedoresPage() {
+export default async function ProveedoresPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>
+}) {
+  const { q } = await searchParams
+  const suppliers = await getSuppliers(q)
+
   return (
-    <div>
-      <PageHeader
-        title="Proveedores"
-        description="Próximamente — esta sección está en desarrollo"
-      />
-      <EmptyState
-        icon={Building2}
-        title="Proveedores"
-        description="Esta sección está en desarrollo. Próximamente podrás gestionar el directorio de proveedores."
-      />
+    <div className="space-y-6">
+      <PageHeader title="Proveedores" description="Directorio de proveedores">
+        <Button asChild>
+          <Link href="/proveedores/nuevo">
+            <Plus className="h-4 w-4" />
+            Nuevo proveedor
+          </Link>
+        </Button>
+      </PageHeader>
+
+      <Suspense>
+        <SupplierSearch />
+      </Suspense>
+
+      {suppliers.length > 0 ? (
+        <SupplierTable suppliers={suppliers} />
+      ) : (
+        <EmptyState
+          icon={Building2}
+          title="No hay proveedores registrados"
+          description={
+            q
+              ? 'No se encontraron proveedores con los criterios de busqueda.'
+              : 'Agrega tu primer proveedor para comenzar a gestionar el directorio.'
+          }
+        >
+          {!q && (
+            <Button asChild>
+              <Link href="/proveedores/nuevo">
+                <Plus className="h-4 w-4" />
+                Nuevo proveedor
+              </Link>
+            </Button>
+          )}
+        </EmptyState>
+      )}
     </div>
   )
 }

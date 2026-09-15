@@ -123,3 +123,207 @@ export async function getRoomReservations(roomId: string) {
     return []
   }
 }
+
+// ---- Room CRUD ----
+
+export async function getRoomCategoryById(id: string): Promise<RoomCategory | null> {
+  const sql = getDb()
+
+  try {
+    const rows = await sql`
+      SELECT * FROM room_categories WHERE id = ${id}
+    `
+    return (rows[0] as RoomCategory) ?? null
+  } catch (error) {
+    console.error('Error fetching room category:', error)
+    return null
+  }
+}
+
+export async function createRoom(data: {
+  name: string
+  categoryId: string
+  floor?: string
+  notes?: string
+  sortOrder?: number
+}) {
+  const sql = getDb()
+
+  try {
+    await sql`
+      INSERT INTO rooms (name, category_id, floor, notes, sort_order)
+      VALUES (
+        ${data.name},
+        ${data.categoryId},
+        ${data.floor ?? null},
+        ${data.notes ?? null},
+        ${data.sortOrder ?? 0}
+      )
+    `
+  } catch (error) {
+    console.error('Error creating room:', error)
+    return { error: (error as Error).message }
+  }
+
+  revalidatePath('/cabanas')
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
+export async function updateRoom(
+  id: string,
+  data: {
+    name: string
+    categoryId: string
+    floor?: string
+    notes?: string
+    sortOrder?: number
+  }
+) {
+  const sql = getDb()
+
+  try {
+    await sql`
+      UPDATE rooms
+      SET name = ${data.name},
+          category_id = ${data.categoryId},
+          floor = ${data.floor ?? null},
+          notes = ${data.notes ?? null},
+          sort_order = ${data.sortOrder ?? 0},
+          updated_at = now()
+      WHERE id = ${id}
+    `
+  } catch (error) {
+    console.error('Error updating room:', error)
+    return { error: (error as Error).message }
+  }
+
+  revalidatePath('/cabanas')
+  revalidatePath(`/cabanas/${id}`)
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
+export async function deleteRoom(id: string) {
+  const sql = getDb()
+
+  try {
+    // Check for active reservations
+    const activeReservations = await sql`
+      SELECT COUNT(*) as count
+      FROM reservations
+      WHERE room_id = ${id}
+        AND status IN ('pending', 'confirmed', 'checked_in')
+    `
+    if (Number(activeReservations[0].count) > 0) {
+      return { error: 'No se puede eliminar la cabana porque tiene reservaciones activas.' }
+    }
+
+    await sql`DELETE FROM rooms WHERE id = ${id}`
+  } catch (error) {
+    console.error('Error deleting room:', error)
+    return { error: (error as Error).message }
+  }
+
+  revalidatePath('/cabanas')
+  revalidatePath('/dashboard')
+  return { success: true }
+}
+
+// ---- Room Category CRUD ----
+
+export async function createRoomCategory(data: {
+  name: string
+  description?: string
+  basePrice: number
+  maxAdults: number
+  maxChildren: number
+  amenities?: string[]
+  sortOrder?: number
+}) {
+  const sql = getDb()
+
+  try {
+    await sql`
+      INSERT INTO room_categories (name, description, base_price, max_adults, max_children, amenities, sort_order)
+      VALUES (
+        ${data.name},
+        ${data.description ?? null},
+        ${data.basePrice},
+        ${data.maxAdults},
+        ${data.maxChildren},
+        ${JSON.stringify(data.amenities ?? [])},
+        ${data.sortOrder ?? 0}
+      )
+    `
+  } catch (error) {
+    console.error('Error creating room category:', error)
+    return { error: (error as Error).message }
+  }
+
+  revalidatePath('/cabanas')
+  revalidatePath('/cabanas/categorias')
+  return { success: true }
+}
+
+export async function updateRoomCategory(
+  id: string,
+  data: {
+    name: string
+    description?: string
+    basePrice: number
+    maxAdults: number
+    maxChildren: number
+    amenities?: string[]
+    sortOrder?: number
+  }
+) {
+  const sql = getDb()
+
+  try {
+    await sql`
+      UPDATE room_categories
+      SET name = ${data.name},
+          description = ${data.description ?? null},
+          base_price = ${data.basePrice},
+          max_adults = ${data.maxAdults},
+          max_children = ${data.maxChildren},
+          amenities = ${JSON.stringify(data.amenities ?? [])},
+          sort_order = ${data.sortOrder ?? 0},
+          updated_at = now()
+      WHERE id = ${id}
+    `
+  } catch (error) {
+    console.error('Error updating room category:', error)
+    return { error: (error as Error).message }
+  }
+
+  revalidatePath('/cabanas')
+  revalidatePath('/cabanas/categorias')
+  return { success: true }
+}
+
+export async function deleteRoomCategory(id: string) {
+  const sql = getDb()
+
+  try {
+    // Check if any rooms use this category
+    const roomsUsingCategory = await sql`
+      SELECT COUNT(*) as count
+      FROM rooms
+      WHERE category_id = ${id}
+    `
+    if (Number(roomsUsingCategory[0].count) > 0) {
+      return { error: 'No se puede eliminar la categoria porque tiene cabanas asignadas.' }
+    }
+
+    await sql`DELETE FROM room_categories WHERE id = ${id}`
+  } catch (error) {
+    console.error('Error deleting room category:', error)
+    return { error: (error as Error).message }
+  }
+
+  revalidatePath('/cabanas')
+  revalidatePath('/cabanas/categorias')
+  return { success: true }
+}

@@ -7,6 +7,7 @@ import {
   Wifi,
   DollarSign,
   CalendarDays,
+  Pencil,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { RoomStatusBadge, CleaningStatusBadge } from '@/components/rooms/room-status-badge'
 import { RoomDetailActions } from '@/components/rooms/room-detail-actions'
+import { DeleteRoomButton } from '@/components/rooms/delete-room-button'
 import { getRoomById, getRoomReservations } from '@/actions/rooms'
 import { formatCurrency, formatDate } from '@/lib/formatters'
 import { RESERVATION_STATUSES } from '@/lib/constants'
@@ -65,6 +67,15 @@ export default async function RoomDetailPage({
               {room.category.name}
             </p>
           )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/cabanas/${room.id}/editar`}>
+              <Pencil className="h-3.5 w-3.5" />
+              Editar
+            </Link>
+          </Button>
+          <DeleteRoomButton roomId={room.id} roomName={room.name} />
         </div>
       </div>
 

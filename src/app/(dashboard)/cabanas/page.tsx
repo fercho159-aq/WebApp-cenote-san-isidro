@@ -1,4 +1,6 @@
-import { BedDouble } from 'lucide-react'
+import Link from 'next/link'
+import { BedDouble, Plus, Tag } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/shared/page-header'
 import { EmptyState } from '@/components/shared/empty-state'
 import { RoomCard } from '@/components/rooms/room-card'
@@ -12,7 +14,21 @@ export default async function CabanasPage() {
       <PageHeader
         title="Cabanas"
         description="Gestiona las 12 cabanas del cenote"
-      />
+      >
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/cabanas/categorias">
+            <Tag className="h-4 w-4" />
+            Categorias
+          </Link>
+        </Button>
+        <Link
+          href="/cabanas/nueva"
+          className="inline-flex items-center gap-2 bg-[#0D7D6C] text-white rounded-lg px-4 py-2 text-sm font-semibold hover:bg-[#0a6959] transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          Nueva Cabana
+        </Link>
+      </PageHeader>
 
       {rooms.length === 0 ? (
         <EmptyState

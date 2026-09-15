@@ -1,19 +1,21 @@
-import { Utensils } from "lucide-react"
-import { PageHeader } from "@/components/shared/page-header"
-import { EmptyState } from "@/components/shared/empty-state"
+import { getActiveProducts, getProductCategories } from '@/actions/products'
+import { getCheckedInReservations, getSales } from '@/actions/pos'
+import { PosTerminal } from '@/components/pos/pos-terminal'
 
-export default function PosPage() {
+export default async function PosPage() {
+  const [products, categories, reservations, recentSales] = await Promise.all([
+    getActiveProducts(),
+    getProductCategories(),
+    getCheckedInReservations(),
+    getSales({ status: 'completed' }),
+  ])
+
   return (
-    <div>
-      <PageHeader
-        title="Punto de venta"
-        description="Próximamente — esta sección está en desarrollo"
-      />
-      <EmptyState
-        icon={Utensils}
-        title="Punto de venta"
-        description="Esta sección está en desarrollo. Próximamente podrás registrar ventas directas y cargos a habitación."
-      />
-    </div>
+    <PosTerminal
+      products={products}
+      categories={categories.filter((c) => c.is_active)}
+      reservations={reservations}
+      recentSales={recentSales}
+    />
   )
 }
